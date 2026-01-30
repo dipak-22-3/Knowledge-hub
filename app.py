@@ -10,11 +10,10 @@ from youtube_transcript_api import YouTubeTranscriptApi
 # --- 1. SETUP & DATABASE ---
 load_dotenv()
 
-# Database Connection (SQLite - Built-in, Free, Zero Setup)
+# Database Connection
 def init_db():
     conn = sqlite3.connect('knowledge_hub.db')
     c = conn.cursor()
-    # Create table for saved history
     c.execute('''CREATE TABLE IF NOT EXISTS history 
                  (id INTEGER PRIMARY KEY, tool TEXT, title TEXT, content TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
     conn.commit()
@@ -24,10 +23,8 @@ conn = init_db()
 
 # API Configuration
 try:
-    # Try Cloud Secrets first
     api_key = st.secrets["GROQ_API_KEY"]
 except:
-    # Try Local .env
     api_key = os.getenv("GROQ_API_KEY")
 
 if not api_key:
@@ -36,10 +33,13 @@ if not api_key:
 
 client = Groq(api_key=api_key)
 
+# *** UPDATED MODEL NAME HERE ***
+MODEL_NAME = "llama-3.3-70b-versatile" 
+
 # --- 2. PAGE CONFIGURATION ---
 st.set_page_config(page_title="Knowledge Hub Pro", layout="wide", page_icon="🎓")
 
-# Custom CSS for better GUI
+# Custom CSS
 st.markdown("""
     <style>
     .stButton>button {
@@ -63,7 +63,7 @@ with st.sidebar:
     menu = st.radio("Navigate:", 
         ["🏠 Home", "🤖 Chat with Docs", "📝 AI Planner", "🎥 YouTube Notes", "💾 Saved History"])
     st.markdown("---")
-    st.caption("Powered by Llama 3 & Groq")
+    st.caption(f"Powered by {MODEL_NAME}")
 
 # --- 4. APP LOGIC ---
 
@@ -71,20 +71,15 @@ with st.sidebar:
 if menu == "🏠 Home":
     st.markdown('<div class="main-header">Welcome to Knowledge Hub</div>', unsafe_allow_html=True)
     st.markdown("---")
-    
     col1, col2, col3 = st.columns(3)
-    with col1:
-        st.info("📚 **RAG System**\n\nUpload books and chat with them instantly.")
-    with col2:
-        st.success("📝 **AI Planner**\n\nGenerate professional Lesson Plans & Quizzes.")
-    with col3:
-        st.warning("💾 **Database**\n\nSave your work locally and view it anytime.")
+    with col1: st.info("📚 **RAG System**\n\nUpload books and chat.")
+    with col2: st.success("📝 **AI Planner**\n\nCreate Lesson Plans.")
+    with col3: st.warning("💾 **Database**\n\nSave your work.")
 
-# === CHAT WITH DOCS (New GUI) ===
+# === CHAT WITH DOCS ===
 elif menu == "🤖 Chat with Docs":
     st.header("🤖 Chat with Documents")
     
-    # Session State for Chat History in GUI
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
@@ -96,21 +91,17 @@ elif menu == "🤖 Chat with Docs":
         for page in reader.pages:
             text += page.extract_text()
         
-        st.success("PDF Loaded! Ask your questions below.")
+        st.success("PDF Loaded!")
         
-        # Display Chat History (WhatsApp Style)
         for message in st.session_state.messages:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-        # User Input
         if prompt := st.chat_input("Ask something about the PDF..."):
-            # Add user message to history
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.markdown(prompt)
 
-            # Generate AI Response
             with st.chat_message("assistant"):
                 try:
                     chat_completion = client.chat.completions.create(
@@ -118,17 +109,15 @@ elif menu == "🤖 Chat with Docs":
                             {"role": "system", "content": f"Answer based ONLY on this text: {text[:20000]}"},
                             {"role": "user", "content": prompt}
                         ],
-                        model="llama3-8b-8192",
+                        model=MODEL_NAME, # Updated Model
                     )
                     response = chat_completion.choices[0].message.content
                     st.markdown(response)
-                    
-                    # Add AI message to history
                     st.session_state.messages.append({"role": "assistant", "content": response})
                 except Exception as e:
                     st.error(f"API Error: {e}")
 
-# === AI PLANNER (With Database Save) ===
+# === AI PLANNER ===
 elif menu == "📝 AI Planner":
     st.header("📝 AI Lesson Planner")
     
@@ -143,7 +132,7 @@ elif menu == "📝 AI Planner":
                     prompt = f"Create a structured lesson plan for '{topic}' ({level})."
                     response = client.chat.completions.create(
                         messages=[{"role": "user", "content": prompt}],
-                        model="llama3-8b-8192",
+                        model=MODEL_NAME, # Updated Model
                     ).choices[0].message.content
                     
                     st.session_state['last_plan'] = response
@@ -151,13 +140,11 @@ elif menu == "📝 AI Planner":
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-    # Show Result if exists
     if 'last_plan' in st.session_state:
         st.markdown("### Generated Plan")
         st.write(st.session_state['last_plan'])
         
-        # SAVE TO DATABASE BUTTON
-        if st.button("💾 Save this Plan to Database"):
+        if st.button("💾 Save to Database"):
             c = conn.cursor()
             c.execute("INSERT INTO history (tool, title, content) VALUES (?, ?, ?)", 
                      ("Planner", st.session_state['last_topic'], st.session_state['last_plan']))
@@ -181,7 +168,7 @@ elif menu == "🎥 YouTube Notes":
                 prompt = f"Summarize this video:\n{text[:15000]}"
                 response = client.chat.completions.create(
                     messages=[{"role": "user", "content": prompt}],
-                    model="llama3-8b-8192",
+                    model=MODEL_NAME, # Updated Model
                 ).choices[0].message.content
                 
                 st.markdown("### Summary")
@@ -190,11 +177,9 @@ elif menu == "🎥 YouTube Notes":
             except Exception as e:
                 st.error("Could not fetch video. Ensure it has captions.")
 
-# === SAVED HISTORY (Database View) ===
+# === SAVED HISTORY ===
 elif menu == "💾 Saved History":
     st.header("💾 Database Records")
-    
-    # Retrieve from DB
     c = conn.cursor()
     c.execute("SELECT id, tool, title, timestamp FROM history ORDER BY id DESC")
     rows = c.fetchall()
@@ -203,7 +188,6 @@ elif menu == "💾 Saved History":
         df = pd.DataFrame(rows, columns=["ID", "Tool", "Title", "Date"])
         st.dataframe(df, use_container_width=True)
         
-        # Load specific item
         record_id = st.number_input("Enter ID to view details", min_value=1, step=1)
         if st.button("Load Details"):
             c.execute("SELECT content FROM history WHERE id=?", (record_id,))
@@ -214,5 +198,4 @@ elif menu == "💾 Saved History":
             else:
                 st.error("ID not found.")
     else:
-        st.info("Database is empty. Save some lesson plans first!")
-    
+        st.info("Database is empty.")
