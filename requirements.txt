@@ -1,0 +1,6 @@
+streamlit
+pandas
+groq
+pypdf
+python-dotenv
+youtube-transcript-api
