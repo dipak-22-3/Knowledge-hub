@@ -4,3 +4,8 @@ groq
 pypdf
 python-dotenv
 youtube-transcript-api
+fpdf
+streamlit-option-menu
+streamlit-lottie
+requests
+gtts
