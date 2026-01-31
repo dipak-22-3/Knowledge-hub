@@ -95,30 +95,26 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 5. HELPER FUNCTIONS ---
+# --- PURANA CODE HATAEIN ---
+# def render_mermaid(code):
+#     html_code = f"""..."""
+#     components.html(html_code...)
+
+# --- NYA CODE LAGAYEIN (Graphviz Engine) ---
+import graphviz
+
 def render_mermaid(code):
     """
-    Renders Mermaid diagram with error handling and clean HTML injection
+    Renders diagram using Streamlit's native Graphviz engine.
+    Much more stable than injecting JS.
     """
-    # Clean the code to remove potential markdown artifacts if regex missed them
-    code = code.replace("```mermaid", "").replace("```", "").strip()
-    
-    html_code = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <script type="module">
-            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-            mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
-        </script>
-    </head>
-    <body>
-        <div class="mermaid" style="text-align: center;">
-            {code}
-        </div>
-    </body>
-    </html>
-    """
-    components.html(html_code, height=500, scrolling=True)
+    # Clean the code (remove Mermaid syntax to fit Graphviz if needed, 
+    # but simplest is to ask AI for Graphviz DOT format directly)
+    try:
+        st.graphviz_chart(code)
+    except Exception as e:
+        st.error(f"Diagram Error: {e}")
+        
 
 def text_to_speech(text):
     import tempfile
@@ -241,34 +237,29 @@ elif selected == "Planner Pro":
                 if st.button("🔊 Listen"):
                     st.audio(text_to_speech(st.session_state['gen_plan'][:500]))
 
-    with tab2:
-        st.subheader("Visual Concept Mapper (Bug Fixed)")
+         with tab2:
+        st.subheader("Visual Concept Mapper (Graphviz Engine)")
         concept = st.text_input("Concept to Visualize", placeholder="e.g. Photosynthesis")
+        
         if st.button("Visualize 🧠"):
-            with st.spinner("Diagramming..."):
-                # STRICT PROMPT to avoid Syntax Errors
+            with st.spinner("Drawing Chart..."):
+                # CHANGE: Asking for DOT format instead of Mermaid
                 prompt = f"""
-                Create a Mermaid JS diagram (graph TD) for '{concept}'. 
+                Create a Graphviz DOT language code for a mindmap about '{concept}'.
                 RULES:
-                1. Start with 'graph TD'.
-                2. Use simple node names like A[Text] or B[Text].
-                3. DO NOT use parentheses () in node text, use square brackets [] ONLY.
-                4. Return ONLY the mermaid code block.
+                1. Start with 'digraph G {{'.
+                2. Use clean node labels.
+                3. Do not use markdown backticks (```).
+                4. Return ONLY the code.
                 """
                 res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODEL_NAME).choices[0].message.content
                 
-                try:
-                    # Robust extraction using Regex
-                    mermaid_code = re.search(r'```mermaid\n(.*?)\n```', res, re.DOTALL)
-                    if mermaid_code:
-                        code = mermaid_code.group(1)
-                    else:
-                        # Fallback if no code block found
-                        code = res.replace("```mermaid", "").replace("```", "").strip()
-                    
-                    render_mermaid(code)
-                except Exception as e:
-                    st.error(f"Error parsing diagram: {e}")
+                # Cleanup code
+                clean_code = res.replace("```dot", "").replace("```graphviz", "").replace("```", "").strip()
+                
+                # Render
+                st.graphviz_chart(clean_code)
+                
 
     with tab3:
         st.info("Draft professional emails to parents.")
