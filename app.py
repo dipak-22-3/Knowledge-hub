@@ -4,6 +4,7 @@ import sqlite3
 import pandas as pd
 import requests
 import base64
+import streamlit.components.v1 as components
 from dotenv import load_dotenv
 from groq import Groq
 from pypdf import PdfReader
@@ -14,12 +15,12 @@ from streamlit_lottie import st_lottie
 from gtts import gTTS
 
 # --- 1. CONFIGURATION & SETUP ---
-st.set_page_config(page_title="KnowledgeOS", layout="wide", page_icon="🧠", initial_sidebar_state="expanded")
+st.set_page_config(page_title="KnowledgeOS Pro", layout="wide", page_icon="🧠", initial_sidebar_state="expanded")
 load_dotenv()
 
 # Database Init
 def init_db():
-    conn = sqlite3.connect('knowledge_hub.db')
+    conn = sqlite3.connect('knowledge_hub.db', check_same_thread=False)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS history 
                  (id INTEGER PRIMARY KEY, tool TEXT, title TEXT, content TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
@@ -35,164 +36,163 @@ except:
     api_key = None
 
 if not api_key:
-    st.error("🚨 Critical Error: API Key missing.")
+    st.error("🚨 Critical Error: API Key missing. Please check .env or Secrets.")
     st.stop()
 
 client = Groq(api_key=api_key)
 MODEL_NAME = "llama-3.3-70b-versatile"
 
-# --- 2. ADVANCED UI/UX (CSS & ANIMATIONS) ---
+# --- 2. ANIMATIONS & ASSETS ---
 def load_lottieurl(url):
-    r = requests.get(url)
-    if r.status_code != 200: return None
-    return r.json()
+    try:
+        r = requests.get(url)
+        if r.status_code != 200: return None
+        return r.json()
+    except: return None
 
-# Load Animations
-lottie_coding = load_lottieurl("https://assets5.lottiefiles.com/packages/lf20_fcfjwiyb.json")
-lottie_robot = load_lottieurl("https://assets3.lottiefiles.com/packages/lf20_1LhsaB.json")
+# Load Animations (Stored in variables for reuse)
+anim_welcome = load_lottieurl("https://assets5.lottiefiles.com/packages/lf20_1LhsaB.json") # Robot
+anim_chat = load_lottieurl("https://assets4.lottiefiles.com/packages/lf20_zprb9hfi.json") # Chat
+anim_plan = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json") # Documents
+anim_video = load_lottieurl("https://assets9.lottiefiles.com/packages/lf20_khzniYA8.json") # Video
+anim_loading = load_lottieurl("https://assets9.lottiefiles.com/packages/lf20_p8bfn5to.json") # Loading
 
-# Custom CSS for "Beautiful Product" Feel
+# --- 3. CUSTOM CSS (THE "DOOR OPENING" ANIMATION) ---
 st.markdown("""
     <style>
-    /* Global Font & Colors */
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
-    
-    html, body, [class*="css"] {
-        font-family: 'Poppins', sans-serif; 
+    /* 1. Global Animation: Fade In Up (Like a door opening) */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translate3d(0, 40px, 0); }
+        to { opacity: 1; transform: translate3d(0, 0, 0); }
     }
     
-    /* Hide Streamlit Branding */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    
-    /* Modern Cards */
+    .stMarkdown, .stButton, .stTextInput, .stDataFrame {
+        animation-duration: 0.8s;
+        animation-fill-mode: both;
+        animation-name: fadeInUp;
+    }
+
+    /* 2. Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background-color: #F8F9FA;
+        border-right: 1px solid #E0E0E0;
+    }
+
+    /* 3. Card Styling (Glass-like but safe) */
     .metric-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f0f2f6 100%);
-        border-radius: 15px;
+        background: white;
+        border-radius: 12px;
         padding: 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         text-align: center;
-        transition: transform 0.3s ease;
-        border: 1px solid #e0e0e0;
+        border-bottom: 4px solid #4F8BF9;
+        transition: transform 0.2s;
     }
     .metric-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    }
-    .metric-value {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #4F8BF9;
-    }
-    .metric-label {
-        font-size: 1rem;
-        color: #666;
-        font-weight: 500;
+        transform: scale(1.02);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
     }
     
-    /* Custom Buttons */
-    .stButton>button {
-        border-radius: 50px;
-        background: linear-gradient(90deg, #4F8BF9 0%, #00d2ff 100%);
-        color: white;
-        border: none;
-        font-weight: 600;
-        padding: 0.5rem 2rem;
-    }
-    .stButton>button:hover {
-        transform: scale(1.05);
-        box-shadow: 0 5px 15px rgba(79, 139, 249, 0.4);
-    }
+    /* 4. Chat Bubbles */
+    .user-msg { background-color: #E3F2FD; padding: 10px 15px; border-radius: 15px 15px 0 15px; text-align: right; margin-bottom: 10px; }
+    .bot-msg { background-color: #F1F3F4; padding: 10px 15px; border-radius: 15px 15px 15px 0; text-align: left; margin-bottom: 10px; }
     
-    /* Chat Bubbles */
-    .user-msg {
-        background-color: #E3F2FD;
-        padding: 15px;
-        border-radius: 20px 20px 5px 20px;
-        margin: 10px 0;
-        text-align: right;
-    }
-    .bot-msg {
-        background-color: #F5F5F5;
-        padding: 15px;
-        border-radius: 20px 20px 20px 5px;
-        margin: 10px 0;
-        border-left: 5px solid #4F8BF9;
-    }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. HELPER FUNCTIONS ---
+# --- 4. HELPER FUNCTIONS ---
+
+def render_mermaid(code):
+    """Renders Mermaid.js diagrams using HTML injection"""
+    html_code = f"""
+    <div class="mermaid" style="text-align: center;">
+    {code}
+    </div>
+    <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({{ startOnLoad: true }});
+    </script>
+    """
+    components.html(html_code, height=400, scrolling=True)
+
 def text_to_speech(text):
+    import tempfile
+    tfile = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
     tts = gTTS(text=text, lang='en')
-    filename = "speech.mp3"
-    tts.save(filename)
-    return filename
+    tts.save(tfile.name)
+    return tfile.name
 
 def create_pdf(text):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
+    # Sanitizing text for FPDF (It hates emojis and special chars)
     clean_text = text.encode('latin-1', 'replace').decode('latin-1')
     pdf.multi_cell(0, 10, clean_text)
     return pdf.output(dest='S').encode('latin-1')
 
-# --- 4. NAVIGATION (SIDEBAR V2) ---
+# --- 5. SIDEBAR ---
 with st.sidebar:
-    st_lottie(lottie_robot, height=150, key="robot_sidebar")
+    st_lottie(anim_welcome, height=120, key="logo_anim")
+    st.title("KnowledgeOS")
+    st.caption("Ultimate Teacher's Toolkit")
+    
     selected = option_menu(
-        menu_title="KnowledgeOS",
+        menu_title="Navigation",
         options=["Dashboard", "Smart Chat", "Planner Pro", "Media Studio", "My Library"],
-        icons=["speedometer2", "chat-dots-fill", "journal-richtext", "youtube", "archive-fill"],
-        menu_icon="cpu",
+        icons=["speedometer", "chat-text", "journal-bookmark", "play-btn", "folder2-open"],
+        menu_icon="cast",
         default_index=0,
         styles={
-            "container": {"padding": "5px!important", "background-color": "#fafafa"},
-            "icon": {"color": "#4F8BF9", "font-size": "20px"}, 
-            "nav-link": {"font-size": "16px", "text-align": "left", "margin":"0px", "--hover-color": "#eee"},
+            "container": {"background-color": "transparent"},
+            "icon": {"color": "#4F8BF9", "font-size": "18px"}, 
+            "nav-link": {"font-size": "15px", "text-align": "left", "margin":"5px", "--hover-color": "#e1e1e1"},
             "nav-link-selected": {"background-color": "#4F8BF9"},
         }
     )
+    
     st.markdown("---")
-    st.caption("v3.0.1 Ultimate Edition")
+    st.info("System Status: 🟢 Online")
 
-# --- 5. MAIN APPLICATION LOGIC ---
+# --- 6. MAIN APP LOGIC ---
 
 # === DASHBOARD ===
 if selected == "Dashboard":
-    st.markdown("<h1 style='text-align: center;'>🚀 Welcome Back, Creator</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #666;'>Your AI-powered productivity Operating System</p>", unsafe_allow_html=True)
-    st.markdown("---")
+    st.markdown("<h1 style='text-align: center;'>🚀 Command Center</h1>", unsafe_allow_html=True)
     
-    # Stats
+    # Fetch Live Stats
     c = conn.cursor()
     c.execute("SELECT tool, COUNT(*) FROM history GROUP BY tool")
     stats = dict(c.fetchall())
     
-    # Dynamic Cards
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.markdown(f'<div class="metric-card"><div class="metric-value">{stats.get("Planner", 0)}</div><div class="metric-label">Lesson Plans</div></div>', unsafe_allow_html=True)
-    with c2:
-        st.markdown(f'<div class="metric-card"><div class="metric-value">{stats.get("YouTube", 0)}</div><div class="metric-label">Video Summaries</div></div>', unsafe_allow_html=True)
-    with c3:
-        st.markdown(f'<div class="metric-card"><div class="metric-value">{stats.get("Chat", 0)}</div><div class="metric-label">Documents Read</div></div>', unsafe_allow_html=True)
-    with c4:
-        st.markdown(f'<div class="metric-card"><div class="metric-value">Pro</div><div class="metric-label">Plan Status</div></div>', unsafe_allow_html=True)
-
-    st.markdown("### 🔥 Quick Actions")
-    col1, col2 = st.columns([2,1])
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.info("💡 **Did you know?** You can now listen to your lesson plans using the Audio Player in Planner Pro.")
+        st.markdown(f'<div class="metric-card"><h3>📚 Plans</h3><h2>{stats.get("Planner", 0)}</h2></div>', unsafe_allow_html=True)
     with col2:
-        st_lottie(lottie_coding, height=150)
+        st.markdown(f'<div class="metric-card"><h3>🎥 Videos</h3><h2>{stats.get("YouTube", 0)}</h2></div>', unsafe_allow_html=True)
+    with col3:
+        st.markdown(f'<div class="metric-card"><h3>🧠 Chats</h3><h2>{stats.get("Chat", 0)}</h2></div>', unsafe_allow_html=True)
+    with col4:
+        # Dynamic "Pro Status" based on usage
+        total_usage = sum(stats.values())
+        status = "Novice" if total_usage < 5 else "Expert" if total_usage < 20 else "Master"
+        st.markdown(f'<div class="metric-card"><h3>🏆 Rank</h3><h2>{status}</h2></div>', unsafe_allow_html=True)
 
-# === SMART CHAT (RAG V2) ===
+    st.markdown("---")
+    c1, c2 = st.columns([2, 1])
+    with c1:
+        st.subheader("💡 Quick Tips")
+        st.info("• **Planner Pro:** Ab aap 'Mind Map' tab mein diagrams dekh sakte hain.\n• **Media Studio:** YouTube link dalo aur notes paao.\n• **Library:** Purani files delete bhi kar sakte ho.")
+    with c2:
+        st_lottie(anim_loading, height=200, key="dash_anim")
+
+# === SMART CHAT ===
 elif selected == "Smart Chat":
-    st.header("🧠 Smart Document Chat")
+    col_a, col_b = st.columns([3,1])
+    with col_a: st.header("🧠 Smart Document Chat")
+    with col_b: st_lottie(anim_chat, height=80, key="chat_head_anim")
     
-    with st.expander("📂 Upload Configuration", expanded=True):
-        uploaded_file = st.file_uploader("Upload PDF / Text File", type=["pdf", "txt"])
+    uploaded_file = st.file_uploader("Upload PDF or Text File", type=["pdf", "txt"])
     
     if "chat_history" not in st.session_state: st.session_state.chat_history = []
     
@@ -202,47 +202,52 @@ elif selected == "Smart Chat":
             text = "".join([p.extract_text() for p in PdfReader(uploaded_file).pages])
         else:
             text = uploaded_file.read().decode("utf-8")
-            
-        st.toast("Document Indexed Successfully!", icon="✅")
         
-        # Chat Interface
+        st.toast("File Read Successfully!", icon="📖")
+        
+        # Display Chat
         for msg in st.session_state.chat_history:
-            st.markdown(f"<div class='{msg['type']}'>{msg['content']}</div>", unsafe_allow_html=True)
-            
-        prompt = st.chat_input("Ask anything about the doc...")
+            if msg["role"] == "user":
+                st.markdown(f'<div class="user-msg">{msg["content"]}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="bot-msg">{msg["content"]}</div>', unsafe_allow_html=True)
+        
+        prompt = st.chat_input("Ask something about the document...")
         if prompt:
-            st.session_state.chat_history.append({"type": "user-msg", "content": prompt})
-            st.markdown(f"<div class='user-msg'>{prompt}</div>", unsafe_allow_html=True)
+            st.session_state.chat_history.append({"role": "user", "content": prompt})
+            st.markdown(f'<div class="user-msg">{prompt}</div>', unsafe_allow_html=True)
             
-            with st.spinner("Thinking..."):
+            with st.spinner("Analyzing..."):
                 response = client.chat.completions.create(
                     messages=[{"role": "system", "content": f"Context: {text[:20000]}"}, {"role": "user", "content": prompt}],
                     model=MODEL_NAME
                 ).choices[0].message.content
                 
-                st.session_state.chat_history.append({"type": "bot-msg", "content": response})
-                st.markdown(f"<div class='bot-msg'>{response}</div>", unsafe_allow_html=True)
+                st.session_state.chat_history.append({"role": "assistant", "content": response})
+                st.markdown(f'<div class="bot-msg">{response}</div>', unsafe_allow_html=True)
                 
-                # Auto-save chat logs
-                c = conn.cursor()
-                c.execute("INSERT INTO history (tool, title, content) VALUES (?,?,?)", ("Chat", "Chat Log", f"Q: {prompt} | A: {response}"))
+                # Save to DB
+                conn.cursor().execute("INSERT INTO history (tool, title, content) VALUES (?,?,?)", ("Chat", "Chat Log", f"Q: {prompt}\nA: {response}"))
                 conn.commit()
 
-# === PLANNER PRO (Tools Suite) ===
+# === PLANNER PRO ===
 elif selected == "Planner Pro":
-    st.header("📝 Planner Pro Suite")
+    col_a, col_b = st.columns([3,1])
+    with col_a: st.header("📝 Lesson Planner Suite")
+    with col_b: st_lottie(anim_plan, height=80, key="plan_head_anim")
     
-    tab1, tab2, tab3 = st.tabs(["📘 Lesson Generator", "🧠 Mind Map", "✉️ Email Parent"])
+    tab1, tab2, tab3 = st.tabs(["📘 Lesson Generator", "🗺️ Mind Map (Fixed)", "✉️ Parent Comms"])
     
+    # TAB 1: GENERATOR
     with tab1:
         c1, c2 = st.columns(2)
-        topic = c1.text_input("Lesson Topic", placeholder="e.g. Photosynthesis")
-        level = c2.select_slider("Complexity", options=["Easy", "Medium", "Hard", "Expert"])
+        topic = c1.text_input("Lesson Topic", placeholder="e.g. Gravity")
+        level = c2.select_slider("Class Level", options=["Class 1-5", "Class 6-8", "Class 9-10", "College"])
         
-        if st.button("Generate Plan ⚡"):
-            with st.spinner("Architecting Lesson..."):
+        if st.button("Generate Plan ✨", type="primary"):
+            with st.spinner("Thinking..."):
                 plan = client.chat.completions.create(
-                    messages=[{"role": "user", "content": f"Create detailed lesson plan for '{topic}' level '{level}'. Use formatting."}], 
+                    messages=[{"role": "user", "content": f"Create a structured lesson plan for '{topic}' level '{level}'."}], 
                     model=MODEL_NAME
                 ).choices[0].message.content
                 st.session_state['gen_plan'] = plan
@@ -250,122 +255,126 @@ elif selected == "Planner Pro":
         if 'gen_plan' in st.session_state:
             st.markdown("---")
             st.markdown(st.session_state['gen_plan'])
-            
-            # Tools Bar
-            c_a, c_b, c_c = st.columns(3)
-            with c_a:
-                if st.button("🔊 Listen (Audio)"):
-                    audio_file = text_to_speech(st.session_state['gen_plan'][:500]) # Limit for speed
-                    st.audio(audio_file)
-            with c_b:
-                pdf_bytes = create_pdf(st.session_state['gen_plan'])
-                st.download_button("📥 PDF Export", data=pdf_bytes, file_name="plan.pdf", mime='application/pdf')
-            with c_c:
-                if st.button("💾 Save to DB"):
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("💾 Save"):
                     conn.cursor().execute("INSERT INTO history (tool, title, content) VALUES (?,?,?)", ("Planner", topic, st.session_state['gen_plan']))
                     conn.commit()
-                    st.toast("Saved!", icon="💾")
+                    st.toast("Saved!", icon="✅")
+            with col2:
+                pdf_bytes = create_pdf(st.session_state['gen_plan'])
+                st.download_button("📥 PDF", data=pdf_bytes, file_name="plan.pdf", mime='application/pdf')
+            with col3:
+                if st.button("🔊 Listen"):
+                    audio_file = text_to_speech(st.session_state['gen_plan'][:500])
+                    st.audio(audio_file)
 
+    # TAB 2: MIND MAP (FIXED)
     with tab2:
-        st.subheader("Visual Learning (Mermaid.js)")
-        concept = st.text_input("Enter Concept to Visualize")
-        if st.button("Generate Map"):
-            prompt = f"Create a Mermaid.js flowchart code for '{concept}'. Return ONLY the code inside mermaid tags."
-            code = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODEL_NAME).choices[0].message.content
-            # Clean response logic would go here, simplified for demo:
-            st.info("Copy this into a Mermaid viewer (Integration coming in v3.1)")
-            st.code(code, language='mermaid')
+        st.subheader("Visual Concept Mapper")
+        concept = st.text_input("Enter Topic for Mind Map", placeholder="e.g. Solar System")
+        if st.button("Visualize 🧠"):
+            with st.spinner("Drawing Chart..."):
+                prompt = f"Create a Mermaid.js diagram code (graph TD) for '{concept}'. Return ONLY the code inside ```mermaid``` tags."
+                response = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODEL_NAME).choices[0].message.content
+                
+                try:
+                    # Extracting code cleanly
+                    mermaid_code = response.split("```mermaid")[1].split("```")[0].strip()
+                    render_mermaid(mermaid_code) # Calling the JS function
+                except:
+                    st.error("AI couldn't generate a valid chart code. Try a simpler topic.")
 
+    # TAB 3: PARENT COMMS
     with tab3:
-        st.subheader("Auto-Emailer")
-        student_name = st.text_input("Student Name")
-        feedback = st.text_area("Key Points (e.g. Good at math, talks too much)")
+        st.subheader("✉️ Parent Communication Tool")
+        st.info("Use this to write professional emails to parents about student progress.")
+        s_name = st.text_input("Student Name")
+        s_issue = st.text_area("What is the update? (e.g. Scored low in Math, Very helpful in class)")
         if st.button("Draft Email"):
             email = client.chat.completions.create(
-                messages=[{"role": "user", "content": f"Write a polite email to parents of {student_name} mentioning: {feedback}"}], 
+                messages=[{"role": "user", "content": f"Write a polite, professional email to parents of {s_name} regarding: {s_issue}"}], 
                 model=MODEL_NAME
             ).choices[0].message.content
-            st.text_area("Draft", email, height=200)
+            st.code(email, language="markdown")
 
 # === MEDIA STUDIO ===
 elif selected == "Media Studio":
-    st.header("🎥 Media & Quiz Studio")
+    col_a, col_b = st.columns([3,1])
+    with col_a: st.header("🎥 Media & Quiz Studio")
+    with col_b: st_lottie(anim_video, height=80, key="vid_head_anim")
     
-    mode = st.radio("Select Mode", ["YouTube Summarizer", "Quiz Generator"], horizontal=True)
+    st.markdown("### YouTube Summarizer")
+    link = st.text_input("Paste YouTube Link (Must have captions)")
     
-    if mode == "YouTube Summarizer":
-        link = st.text_input("YouTube URL")
-        if st.button("Analyze Video"):
+    if st.button("Summarize 🎬"):
+        if "v=" in link or "youtu.be" in link:
             try:
-                vid_id = link.split("v=")[1].split("&")[0] if "v=" in link else link.split("/")[-1]
-                transcript = " ".join([d['text'] for d in YouTubeTranscriptApi.get_transcript(vid_id)])
+                video_id = link.split("v=")[1].split("&")[0] if "v=" in link else link.split("/")[-1]
                 
-                with st.spinner("Watching video..."):
+                # Try to get transcript (Better Logic)
+                try:
+                    transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+                except:
+                    # Fallback: Try to list available transcripts and pick one
+                    transcript_list = YouTubeTranscriptApi.list_transcripts(video_id).find_generated_transcript(['en']).fetch()
+                
+                full_text = " ".join([d['text'] for d in transcript_list])
+                
+                with st.spinner("Summarizing..."):
                     summary = client.chat.completions.create(
-                        messages=[{"role": "user", "content": f"Summarize in bullet points:\n{transcript[:15000]}"}], 
+                        messages=[{"role": "user", "content": f"Summarize this video content:\n{full_text[:15000]}"}], 
                         model=MODEL_NAME
                     ).choices[0].message.content
                 
-                st.markdown("### 🎬 Summary")
-                st.write(summary)
+                st.markdown(summary)
                 
-                # Save
-                conn.cursor().execute("INSERT INTO history (tool, title, content) VALUES (?,?,?)", ("YouTube", "Video Analysis", summary))
-                conn.commit()
-                
-            except:
-                st.error("Could not process video. Check if captions are enabled.")
-                
-    elif mode == "Quiz Generator":
-        q_topic = st.text_input("Quiz Topic")
-        if st.button("Create Quiz"):
-            quiz = client.chat.completions.create(
-                messages=[{"role": "user", "content": f"Create 5 multiple choice questions on {q_topic} with answers at the end."}], 
-                model=MODEL_NAME
-            ).choices[0].message.content
-            st.session_state['quiz_content'] = quiz
-            
-        if 'quiz_content' in st.session_state:
-            with st.expander("Show Quiz", expanded=True):
-                st.markdown(st.session_state['quiz_content'])
-            if st.button("Reveal Answers"):
-                st.info("Answers are at the bottom of the generated text above.")
+                if st.button("💾 Save Summary"):
+                    conn.cursor().execute("INSERT INTO history (tool, title, content) VALUES (?,?,?)", ("YouTube", "Video Summary", summary))
+                    conn.commit()
+                    st.toast("Saved!", icon="✅")
+                    
+            except Exception as e:
+                st.error("Error: Video has no captions enabled by the creator. Please find a video with CC.")
+        else:
+            st.warning("Invalid Link")
 
 # === MY LIBRARY ===
 elif selected == "My Library":
-    st.header("🗄️ Digital Archive")
+    st.header("🗄️ Your Archives")
     
-    # Search Bar
-    search = st.text_input("🔍 Search your history...", "")
+    # Search & Delete Logic
+    search = st.text_input("🔍 Search Files...")
     
     query = "SELECT id, tool, title, timestamp FROM history"
+    params = []
     if search:
-        query += f" WHERE title LIKE '%{search}%'"
+        query += " WHERE title LIKE ?"
+        params.append(f"%{search}%")
     query += " ORDER BY id DESC"
     
-    df = pd.read_sql(query, conn)
+    c = conn.cursor()
+    c.execute(query, params)
+    rows = c.fetchall()
     
-    # Interactive Table
-    st.dataframe(
-        df, 
-        use_container_width=True, 
-        hide_index=True,
-        column_config={
-            "timestamp": st.column_config.DatetimeColumn("Date", format="D MMM, YYYY, h:mm a"),
-            "tool": st.column_config.TextColumn("Type"),
-        }
-    )
-    
-    c1, c2 = st.columns([1, 3])
-    with c1:
-        oid = st.number_input("Open ID", min_value=1, step=1)
-    with c2:
-        if st.button("Open File"):
-            data = conn.cursor().execute("SELECT content FROM history WHERE id=?", (oid,)).fetchone()
-            if data:
-                st.markdown("---")
-                st.subheader("📄 File Content")
-                st.markdown(data[0])
-            else:
-                st.error("File not found.")
-    
+    if rows:
+        df = pd.DataFrame(rows, columns=["ID", "Tool", "Title", "Date"])
+        st.dataframe(df, use_container_width=True, hide_index=True)
+        
+        c1, c2, c3 = st.columns([1,1,2])
+        with c1: oid = st.number_input("Enter ID", min_value=0, step=1)
+        with c2: 
+            if st.button("📂 Open"):
+                data = c.execute("SELECT content FROM history WHERE id=?", (oid,)).fetchone()
+                if data:
+                    st.markdown("---")
+                    st.markdown(data[0])
+        with c3:
+            if st.button("🗑️ Delete", type="primary"):
+                c.execute("DELETE FROM history WHERE id=?", (oid,))
+                conn.commit()
+                st.warning(f"File {oid} Deleted.")
+                st.rerun()
+    else:
+        st.info("Library empty.")
+            
