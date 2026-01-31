@@ -237,7 +237,7 @@ elif selected == "Planner Pro":
                 if st.button("🔊 Listen"):
                     st.audio(text_to_speech(st.session_state['gen_plan'][:500]))
 
-         with tab2:
+   with tab2:
         st.subheader("Visual Concept Mapper (Graphviz Engine)")
         concept = st.text_input("Concept to Visualize", placeholder="e.g. Photosynthesis")
         
