@@ -13,7 +13,7 @@ from fpdf import FPDF
 from streamlit_option_menu import option_menu
 from streamlit_lottie import st_lottie
 from gtts import gTTS
-import re
+import graphviz # NEW: Using Graphviz for stable images
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="KnowledgeOS Pro", layout="wide", page_icon="⚡", initial_sidebar_state="expanded")
@@ -106,7 +106,8 @@ def create_pdf(text):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    clean_text = text.encode('latin-1', 'replace').decode('latin-1')
+    # Using 'ignore' to prevent crashes on unsupported characters
+    clean_text = text.encode('latin-1', 'ignore').decode('latin-1')
     pdf.multi_cell(0, 10, clean_text)
     return pdf.output(dest='S').encode('latin-1')
 
@@ -114,7 +115,7 @@ def create_pdf(text):
 with st.sidebar:
     safe_lottie(anim_welcome, 120, "logo_anim")
     st.markdown("### **KnowledgeOS**")
-    st.caption("v6.0 Graphviz Edition")
+    st.caption("v6.0 Stable Edition")
     
     selected = option_menu(
         menu_title=None,
@@ -219,25 +220,27 @@ elif selected == "Planner Pro":
     with tab2:
         st.subheader("Visual Concept Mapper (Graphviz Engine)")
         concept = st.text_input("Concept to Visualize", placeholder="e.g. Photosynthesis")
+        
         if st.button("Visualize 🧠"):
             with st.spinner("Drawing Chart..."):
-                # UPGRADED: Using Graphviz DOT format which is stable
+                # Asking for Graphviz DOT format instead of Mermaid
                 prompt = f"""
                 Create a Graphviz DOT language code for a mindmap about '{concept}'.
                 RULES:
                 1. Start with 'digraph G {{'.
-                2. Use clean node labels.
-                3. Do not use markdown backticks (```).
-                4. Return ONLY the code string.
+                2. Use clear node labels.
+                3. Do not use markdown backticks.
+                4. Return ONLY the code.
                 """
                 res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODEL_NAME).choices[0].message.content
                 
+                # Cleanup code
+                clean_code = res.replace("```dot", "").replace("```graphviz", "").replace("```", "").strip()
+                
                 try:
-                    # Cleanup code if AI adds backticks
-                    clean_code = res.replace("```dot", "").replace("```graphviz", "").replace("```", "").strip()
                     st.graphviz_chart(clean_code)
                 except Exception as e:
-                    st.error(f"Error parsing diagram: {e}")
+                    st.error(f"Error drawing graph: {e}")
 
     with tab3:
         st.info("Draft professional emails to parents.")
