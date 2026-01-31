@@ -95,27 +95,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 5. HELPER FUNCTIONS ---
-# --- PURANA CODE HATAEIN ---
-# def render_mermaid(code):
-#     html_code = f"""..."""
-#     components.html(html_code...)
-
-# --- NYA CODE LAGAYEIN (Graphviz Engine) ---
-import graphviz
-
-def render_mermaid(code):
-    """
-    Renders diagram using Streamlit's native Graphviz engine.
-    Much more stable than injecting JS.
-    """
-    # Clean the code (remove Mermaid syntax to fit Graphviz if needed, 
-    # but simplest is to ask AI for Graphviz DOT format directly)
-    try:
-        st.graphviz_chart(code)
-    except Exception as e:
-        st.error(f"Diagram Error: {e}")
-        
-
 def text_to_speech(text):
     import tempfile
     tfile = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
@@ -135,7 +114,7 @@ def create_pdf(text):
 with st.sidebar:
     safe_lottie(anim_welcome, 120, "logo_anim")
     st.markdown("### **KnowledgeOS**")
-    st.caption("v5.2 Fixed Edition")
+    st.caption("v6.0 Graphviz Edition")
     
     selected = option_menu(
         menu_title=None,
@@ -237,29 +216,28 @@ elif selected == "Planner Pro":
                 if st.button("🔊 Listen"):
                     st.audio(text_to_speech(st.session_state['gen_plan'][:500]))
 
-   with tab2:
+    with tab2:
         st.subheader("Visual Concept Mapper (Graphviz Engine)")
         concept = st.text_input("Concept to Visualize", placeholder="e.g. Photosynthesis")
-        
         if st.button("Visualize 🧠"):
             with st.spinner("Drawing Chart..."):
-                # CHANGE: Asking for DOT format instead of Mermaid
+                # UPGRADED: Using Graphviz DOT format which is stable
                 prompt = f"""
                 Create a Graphviz DOT language code for a mindmap about '{concept}'.
                 RULES:
                 1. Start with 'digraph G {{'.
                 2. Use clean node labels.
                 3. Do not use markdown backticks (```).
-                4. Return ONLY the code.
+                4. Return ONLY the code string.
                 """
                 res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODEL_NAME).choices[0].message.content
                 
-                # Cleanup code
-                clean_code = res.replace("```dot", "").replace("```graphviz", "").replace("```", "").strip()
-                
-                # Render
-                st.graphviz_chart(clean_code)
-                
+                try:
+                    # Cleanup code if AI adds backticks
+                    clean_code = res.replace("```dot", "").replace("```graphviz", "").replace("```", "").strip()
+                    st.graphviz_chart(clean_code)
+                except Exception as e:
+                    st.error(f"Error parsing diagram: {e}")
 
     with tab3:
         st.info("Draft professional emails to parents.")
@@ -320,4 +298,4 @@ elif selected == "My Library":
                 st.rerun()
     else:
         st.info("Library is empty.")
-        
+    
