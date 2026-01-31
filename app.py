@@ -13,6 +13,7 @@ from fpdf import FPDF
 from streamlit_option_menu import option_menu
 from streamlit_lottie import st_lottie
 from gtts import gTTS
+import re
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="KnowledgeOS Pro", layout="wide", page_icon="⚡", initial_sidebar_state="expanded")
@@ -41,39 +42,32 @@ if not api_key:
 client = Groq(api_key=api_key)
 MODEL_NAME = "llama-3.3-70b-versatile"
 
-# --- 3. UI/UX ASSETS (BUG FIXED) ---
-
+# --- 3. UI/UX ASSETS ---
 def load_lottieurl(url):
     try:
-        r = requests.get(url, timeout=2) # 2 second timeout prevents freezing
+        r = requests.get(url, timeout=2)
         if r.status_code != 200: return None
         return r.json()
     except: return None
 
-# Safe Lottie Renderer (Crash Prevention)
 def safe_lottie(anim_data, height, key):
     if anim_data:
         st_lottie(anim_data, height=height, key=key)
     else:
-        st.write("") # Render nothing if animation fails
+        st.write("")
 
-# Load Animations
+# Animations
 anim_welcome = load_lottieurl("https://assets5.lottiefiles.com/packages/lf20_1LhsaB.json")
-anim_chat = load_lottieurl("https://lottie.host/embed/9307c844-3253-4809-9139-44520775d718/animation.json") # Updated URL
+anim_chat = load_lottieurl("https://lottie.host/embed/9307c844-3253-4809-9139-44520775d718/animation.json")
 anim_plan = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 anim_video = load_lottieurl("https://assets9.lottiefiles.com/packages/lf20_khzniYA8.json")
 
-# --- 4. ADVANCED CSS (PREMIUM UI) ---
+# --- 4. ADVANCED CSS ---
 st.markdown("""
     <style>
-    /* Import Google Font */
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap');
+    html, body, [class*="css"] { font-family: 'Outfit', sans-serif; }
     
-    html, body, [class*="css"] {
-        font-family: 'Outfit', sans-serif; 
-    }
-
-    /* Gradient Titles */
     .gradient-text {
         font-weight: 800;
         background: -webkit-linear-gradient(45deg, #4F8BF9, #00d2ff);
@@ -82,70 +76,49 @@ st.markdown("""
         font-size: 3rem;
         padding-bottom: 10px;
     }
-
-    /* Modern 3D Cards */
     .metric-card {
         background: white;
         border-radius: 16px;
         padding: 24px;
         box-shadow: 0 4px 20px rgba(0,0,0,0.05);
         border: 1px solid #f0f0f0;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
         text-align: center;
+        transition: transform 0.3s ease;
     }
-    .metric-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 30px rgba(79, 139, 249, 0.15);
-        border-color: #4F8BF9;
-    }
-    .metric-value {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #2D3748;
-    }
-    .metric-label {
-        font-size: 1rem;
-        color: #718096;
-        font-weight: 500;
-    }
-
-    /* Chat Bubbles Polish */
-    .user-msg { 
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-        color: white; 
-        padding: 12px 18px; 
-        border-radius: 18px 18px 4px 18px; 
-        margin-bottom: 12px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .bot-msg { 
-        background: #FFFFFF; 
-        color: #2D3748; 
-        padding: 12px 18px; 
-        border-radius: 18px 18px 18px 4px; 
-        margin-bottom: 12px;
-        border: 1px solid #E2E8F0;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    }
-    
-    /* Sidebar Polish */
-    [data-testid="stSidebar"] {
-        background-color: #FAFAFA;
-        border-right: 1px solid #EEEEEE;
-    }
+    .metric-card:hover { transform: translateY(-5px); border-color: #4F8BF9; }
+    .metric-value { font-size: 2.5rem; font-weight: 700; color: #2D3748; }
+    .metric-label { font-size: 1rem; color: #718096; }
+    .user-msg { background: #E3F2FD; padding: 12px 18px; border-radius: 18px 18px 4px 18px; margin-bottom: 12px; }
+    .bot-msg { background: #FFFFFF; padding: 12px 18px; border-radius: 18px 18px 18px 4px; margin-bottom: 12px; border: 1px solid #E2E8F0; }
+    [data-testid="stSidebar"] { background-color: #FAFAFA; border-right: 1px solid #EEEEEE; }
     </style>
 """, unsafe_allow_html=True)
 
 # --- 5. HELPER FUNCTIONS ---
 def render_mermaid(code):
-    html_code = f"""
-    <div class="mermaid" style="text-align: center;">{code}</div>
-    <script type="module">
-    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-    mermaid.initialize({{ startOnLoad: true }});
-    </script>
     """
-    components.html(html_code, height=400, scrolling=True)
+    Renders Mermaid diagram with error handling and clean HTML injection
+    """
+    # Clean the code to remove potential markdown artifacts if regex missed them
+    code = code.replace("```mermaid", "").replace("```", "").strip()
+    
+    html_code = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <script type="module">
+            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+            mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
+        </script>
+    </head>
+    <body>
+        <div class="mermaid" style="text-align: center;">
+            {code}
+        </div>
+    </body>
+    </html>
+    """
+    components.html(html_code, height=500, scrolling=True)
 
 def text_to_speech(text):
     import tempfile
@@ -166,7 +139,7 @@ def create_pdf(text):
 with st.sidebar:
     safe_lottie(anim_welcome, 120, "logo_anim")
     st.markdown("### **KnowledgeOS**")
-    st.caption("v5.1 Pro Stable")
+    st.caption("v5.2 Fixed Edition")
     
     selected = option_menu(
         menu_title=None,
@@ -176,8 +149,8 @@ with st.sidebar:
         styles={
             "container": {"background-color": "transparent"},
             "icon": {"color": "#4F8BF9", "font-size": "18px"}, 
-            "nav-link": {"font-size": "15px", "margin":"5px", "--hover-color": "#eef2f6"},
-            "nav-link-selected": {"background-color": "#4F8BF9", "font-weight": "500"},
+            "nav-link": {"font-size": "15px", "margin":"5px"},
+            "nav-link-selected": {"background-color": "#4F8BF9"},
         }
     )
     st.markdown("---")
@@ -188,29 +161,16 @@ with st.sidebar:
 # === DASHBOARD ===
 if selected == "Dashboard":
     st.markdown('<div class="gradient-text" style="text-align: center;">🚀 Command Center</div>', unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #718096; margin-bottom: 40px;'>Your AI-Powered Teaching Assistant</p>", unsafe_allow_html=True)
     
     c = conn.cursor()
     c.execute("SELECT tool, COUNT(*) FROM history GROUP BY tool")
     stats = dict(c.fetchall())
     
     c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.markdown(f'<div class="metric-card"><div class="metric-value">{stats.get("Planner", 0)}</div><div class="metric-label">Lesson Plans</div></div>', unsafe_allow_html=True)
-    with c2:
-        st.markdown(f'<div class="metric-card"><div class="metric-value">{stats.get("YouTube", 0)}</div><div class="metric-label">Videos Processed</div></div>', unsafe_allow_html=True)
-    with c3:
-        st.markdown(f'<div class="metric-card"><div class="metric-value">{stats.get("Chat", 0)}</div><div class="metric-label">Chat Logs</div></div>', unsafe_allow_html=True)
-    with c4:
-        st.markdown(f'<div class="metric-card"><div class="metric-value">PRO</div><div class="metric-label">Account Status</div></div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.subheader("💡 Quick Actions")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.info("👉 **Create Plan:** Go to Planner Pro > Generator")
-    with col2:
-        st.warning("👉 **Review:** Check My Library to delete old files")
+    with c1: st.markdown(f'<div class="metric-card"><div class="metric-value">{stats.get("Planner", 0)}</div><div class="metric-label">Lesson Plans</div></div>', unsafe_allow_html=True)
+    with c2: st.markdown(f'<div class="metric-card"><div class="metric-value">{stats.get("YouTube", 0)}</div><div class="metric-label">Videos Processed</div></div>', unsafe_allow_html=True)
+    with c3: st.markdown(f'<div class="metric-card"><div class="metric-value">{stats.get("Chat", 0)}</div><div class="metric-label">Chat Logs</div></div>', unsafe_allow_html=True)
+    with c4: st.markdown(f'<div class="metric-card"><div class="metric-value">PRO</div><div class="metric-label">Account Status</div></div>', unsafe_allow_html=True)
 
 # === SMART CHAT ===
 elif selected == "Smart Chat":
@@ -219,7 +179,6 @@ elif selected == "Smart Chat":
     with c2: safe_lottie(anim_chat, 80, "chat_anim")
     
     uploaded_file = st.file_uploader("Upload PDF / TXT", type=["pdf", "txt"])
-    
     if "chat_history" not in st.session_state: st.session_state.chat_history = []
     
     if uploaded_file:
@@ -230,25 +189,19 @@ elif selected == "Smart Chat":
             text = uploaded_file.read().decode("utf-8")
         st.toast("File Indexed!", icon="📂")
         
-        # Chat Loop
         for msg in st.session_state.chat_history:
-            if msg["role"] == "user":
-                st.markdown(f'<div class="user-msg">{msg["content"]}</div>', unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div class="bot-msg">{msg["content"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="{msg["role"]}-msg">{msg["content"]}</div>', unsafe_allow_html=True)
         
         prompt = st.chat_input("Ask about the document...")
         if prompt:
             st.session_state.chat_history.append({"role": "user", "content": prompt})
             st.markdown(f'<div class="user-msg">{prompt}</div>', unsafe_allow_html=True)
-            
             with st.spinner("Thinking..."):
                 response = client.chat.completions.create(
                     messages=[{"role": "system", "content": f"Context: {text[:20000]}"}, {"role": "user", "content": prompt}],
                     model=MODEL_NAME
                 ).choices[0].message.content
-                
-                st.session_state.chat_history.append({"role": "assistant", "content": response})
+                st.session_state.chat_history.append({"role": "bot", "content": response})
                 st.markdown(f'<div class="bot-msg">{response}</div>', unsafe_allow_html=True)
                 conn.cursor().execute("INSERT INTO history (tool, title, content) VALUES (?,?,?)", ("Chat", "Chat Log", f"Q: {prompt}\nA: {response}"))
                 conn.commit()
@@ -265,7 +218,6 @@ elif selected == "Planner Pro":
         col1, col2 = st.columns(2)
         topic = col1.text_input("Topic", placeholder="e.g. Gravity")
         level = col2.select_slider("Level", options=["Basic", "Intermediate", "Advanced"])
-        
         if st.button("Generate Plan ✨", type="primary"):
             with st.spinner("Generating..."):
                 plan = client.chat.completions.create(
@@ -273,7 +225,6 @@ elif selected == "Planner Pro":
                     model=MODEL_NAME
                 ).choices[0].message.content
                 st.session_state['gen_plan'] = plan
-        
         if 'gen_plan' in st.session_state:
             st.markdown("---")
             st.markdown(st.session_state['gen_plan'])
@@ -291,15 +242,33 @@ elif selected == "Planner Pro":
                     st.audio(text_to_speech(st.session_state['gen_plan'][:500]))
 
     with tab2:
+        st.subheader("Visual Concept Mapper (Bug Fixed)")
         concept = st.text_input("Concept to Visualize", placeholder="e.g. Photosynthesis")
         if st.button("Visualize 🧠"):
             with st.spinner("Diagramming..."):
-                prompt = f"Create a Mermaid JS code (graph TD) for '{concept}'. Return ONLY code inside ```mermaid``` tags."
+                # STRICT PROMPT to avoid Syntax Errors
+                prompt = f"""
+                Create a Mermaid JS diagram (graph TD) for '{concept}'. 
+                RULES:
+                1. Start with 'graph TD'.
+                2. Use simple node names like A[Text] or B[Text].
+                3. DO NOT use parentheses () in node text, use square brackets [] ONLY.
+                4. Return ONLY the mermaid code block.
+                """
                 res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODEL_NAME).choices[0].message.content
+                
                 try:
-                    code = res.split("```mermaid")[1].split("```")[0].strip()
+                    # Robust extraction using Regex
+                    mermaid_code = re.search(r'```mermaid\n(.*?)\n```', res, re.DOTALL)
+                    if mermaid_code:
+                        code = mermaid_code.group(1)
+                    else:
+                        # Fallback if no code block found
+                        code = res.replace("```mermaid", "").replace("```", "").strip()
+                    
                     render_mermaid(code)
-                except: st.error("Failed to generate diagram.")
+                except Exception as e:
+                    st.error(f"Error parsing diagram: {e}")
 
     with tab3:
         st.info("Draft professional emails to parents.")
@@ -323,7 +292,6 @@ elif selected == "Media Studio":
         if "v=" in link or "youtu.be" in link:
             try:
                 vid_id = link.split("v=")[1].split("&")[0] if "v=" in link else link.split("/")[-1]
-                # Improved Transcript Fetching
                 try:
                     transcript_list = YouTubeTranscriptApi.get_transcript(vid_id)
                 except:
@@ -334,25 +302,18 @@ elif selected == "Media Studio":
                     messages=[{"role": "user", "content": f"Summarize:\n{text[:15000]}"}], 
                     model=MODEL_NAME
                 ).choices[0].message.content
-                
                 st.markdown(summary)
-                if st.button("💾 Save Summary"):
-                    conn.cursor().execute("INSERT INTO history (tool, title, content) VALUES (?,?,?)", ("YouTube", "Video Summary", summary))
-                    conn.commit()
-                    st.toast("Saved!", icon="✅")
             except: st.error("No captions found for this video.")
 
 # === MY LIBRARY ===
 elif selected == "My Library":
     st.markdown('<div class="gradient-text">🗄️ My Library</div>', unsafe_allow_html=True)
-    
     search = st.text_input("🔍 Search...")
     query = "SELECT id, tool, title, timestamp FROM history"
     if search: query += f" WHERE title LIKE '%{search}%'"
     query += " ORDER BY id DESC"
     
     df = pd.read_sql(query, conn)
-    
     if not df.empty:
         st.dataframe(df, use_container_width=True, hide_index=True)
         c1, c2, c3 = st.columns([1,1,2])
@@ -368,4 +329,4 @@ elif selected == "My Library":
                 st.rerun()
     else:
         st.info("Library is empty.")
-    
+        
