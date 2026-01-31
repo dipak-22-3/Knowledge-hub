@@ -188,7 +188,7 @@ with st.sidebar:
         default_index=0,
         styles={
             "container": {"background-color": "transparent", "padding": "0"},
-            "icon": {"color": #2563EB, "font-size": "16px"}, 
+            "icon": {"color": "#2563EB", "font-size": "16px"}, # FIXED: Added quotes around color
             "nav-link": {"font-size": "14px", "color": "#374151", "margin": "5px"},
             "nav-link-selected": {"background-color": "#EFF6FF", "color": "#2563EB", "font-weight": "600"},
         }
@@ -369,3 +369,4 @@ elif selected == "My Library":
                 st.rerun()
     else:
         st.info("No files found.")
+                
