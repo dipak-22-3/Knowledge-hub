@@ -56,105 +56,88 @@ def safe_lottie(anim_data, height, key):
     else:
         st.write("")
 
-# Animations (Professional & Minimal)
+# Animations
 anim_welcome = load_lottieurl("https://assets5.lottiefiles.com/packages/lf20_1LhsaB.json")
 anim_chat = load_lottieurl("https://lottie.host/embed/9307c844-3253-4809-9139-44520775d718/animation.json")
 anim_plan = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
-# --- 4. HIGH CONTRAST CSS (Fixed Readability) ---
+# --- 4. UNIVERSAL HIGH-CONTRAST CSS ---
 st.markdown("""
     <style>
-    /* Import Font: Inter (Standard for UI) */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+    /* FORCE LIGHT THEME & HIGH CONTRAST */
     
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-        color: #171717; /* Almost Black for readability */
-    }
-
-    /* Main Background */
+    /* 1. Main Background - Always Light Grey */
     .stApp {
-        background-color: #F4F6F9; /* Soft Blue-Grey - Very Easy on Eyes */
+        background-color: #F0F2F6 !important;
+        color: #000000 !important;
     }
 
-    /* Headers */
-    h1, h2, h3 {
-        color: #111827 !important;
-        font-weight: 700 !important;
-    }
-
-    /* Sidebar */
+    /* 2. Sidebar - Always White */
     [data-testid="stSidebar"] {
-        background-color: #FFFFFF;
-        border-right: 1px solid #E5E7EB;
+        background-color: #FFFFFF !important;
+        border-right: 1px solid #E0E0E0;
     }
 
-    /* Cards - White with Soft Shadow */
-    .metric-card {
-        background: #FFFFFF;
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        border: 1px solid #E5E7EB;
-        text-align: center;
-        transition: transform 0.2s;
+    /* 3. Text Color - Always Dark Grey/Black */
+    h1, h2, h3, h4, h5, h6, p, label, .stMarkdown {
+        color: #1F2937 !important;
     }
-    .metric-card:hover {
-        transform: translateY(-2px);
-        border-color: #3B82F6;
+
+    /* 4. Cards - High Contrast White */
+    .metric-card {
+        background-color: #FFFFFF !important;
+        border: 1px solid #D1D5DB;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-align: center;
+        color: #000000 !important;
     }
     .metric-value {
-        font-size: 2.2rem;
+        font-size: 2rem;
         font-weight: 800;
-        color: #1F2937;
+        color: #111827 !important;
     }
     .metric-label {
         font-size: 0.9rem;
         font-weight: 600;
-        color: #6B7280;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        color: #4B5563 !important;
     }
 
-    /* Chat Bubbles - High Contrast */
+    /* 5. Input Fields - Force White Background, Black Text */
+    .stTextInput>div>div>input, .stTextArea>div>div>textarea, .stSelectbox>div>div>div {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        border: 1px solid #9CA3AF !important;
+    }
+    
+    /* 6. Buttons */
+    .stButton>button {
+        background-color: #2563EB !important;
+        color: white !important;
+        border: none;
+        border-radius: 6px;
+        font-weight: bold;
+    }
+    .stButton>button:hover {
+        background-color: #1D4ED8 !important;
+    }
+
+    /* 7. Chat Bubbles */
     .user-msg {
-        background-color: #3B82F6; /* Professional Blue */
-        color: white;
-        padding: 12px 16px;
-        border-radius: 12px 12px 0 12px;
+        background-color: #2563EB;
+        color: white !important;
+        padding: 10px 15px;
+        border-radius: 10px;
         margin-bottom: 10px;
-        font-weight: 500;
     }
     .bot-msg {
         background-color: #FFFFFF;
-        color: #1F2937; /* Dark Grey */
-        padding: 12px 16px;
-        border-radius: 12px 12px 12px 0;
-        margin-bottom: 10px;
+        color: #000000 !important;
         border: 1px solid #E5E7EB;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    }
-
-    /* Buttons */
-    .stButton>button {
-        background-color: #2563EB;
-        color: white;
-        border-radius: 8px;
-        font-weight: 600;
-        border: none;
-        height: 45px;
-    }
-    .stButton>button:hover {
-        background-color: #1D4ED8;
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-    }
-
-    /* Inputs */
-    .stTextInput input {
-        background-color: #FFFFFF;
-        color: #111827;
-        border: 1px solid #D1D5DB;
-        border-radius: 8px;
+        padding: 10px 15px;
+        border-radius: 10px;
+        margin-bottom: 10px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -171,7 +154,8 @@ def create_pdf(text):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    clean_text = text.encode('latin-1', 'replace').decode('latin-1')
+    # Using 'ignore' to prevent crashes on unsupported characters
+    clean_text = text.encode('latin-1', 'ignore').decode('latin-1')
     pdf.multi_cell(0, 10, clean_text)
     return pdf.output(dest='S').encode('latin-1')
 
@@ -179,7 +163,7 @@ def create_pdf(text):
 with st.sidebar:
     safe_lottie(anim_welcome, 120, "logo_anim")
     st.markdown("### **KnowledgeOS**")
-    st.caption("v7.0 Professional")
+    st.caption("v8.0 Universal")
     
     selected = option_menu(
         menu_title=None,
@@ -188,7 +172,7 @@ with st.sidebar:
         default_index=0,
         styles={
             "container": {"background-color": "transparent", "padding": "0"},
-            "icon": {"color": "#2563EB", "font-size": "16px"}, # FIXED: Added quotes around color
+            "icon": {"color": "#2563EB", "font-size": "16px"}, # FIXED: Added Quotes!
             "nav-link": {"font-size": "14px", "color": "#374151", "margin": "5px"},
             "nav-link-selected": {"background-color": "#EFF6FF", "color": "#2563EB", "font-weight": "600"},
         }
@@ -200,7 +184,7 @@ with st.sidebar:
 # === DASHBOARD ===
 if selected == "Dashboard":
     st.title("🚀 Command Center")
-    st.markdown("Welcome back. Here is your system status.")
+    st.markdown("System Status Overview")
     
     c = conn.cursor()
     c.execute("SELECT tool, COUNT(*) FROM history GROUP BY tool")
@@ -213,13 +197,11 @@ if selected == "Dashboard":
     with c3: st.markdown(f'<div class="metric-card"><div class="metric-value">{stats.get("Chat", 0)}</div><div class="metric-label">Chat Logs</div></div>', unsafe_allow_html=True)
     with c4: st.markdown(f'<div class="metric-card"><div class="metric-value">PRO</div><div class="metric-label">Status</div></div>', unsafe_allow_html=True)
 
-# === SMART CHAT (HANDWRITTEN CHECK ADDED) ===
+# === SMART CHAT ===
 elif selected == "Smart Chat":
     c1, c2 = st.columns([3, 1])
-    with c1: st.title("🧠 Smart Document Chat")
+    with c1: st.title("🧠 Document Chat")
     with c2: safe_lottie(anim_chat, 100, "chat_anim")
-    
-    st.info("ℹ️ Note: Works best with digital PDFs. Scanned images/handwriting may not be detected.")
     
     uploaded_file = st.file_uploader("Upload PDF / TXT", type=["pdf", "txt"])
     if "chat_history" not in st.session_state: st.session_state.chat_history = []
@@ -233,10 +215,8 @@ elif selected == "Smart Chat":
         else:
             text = uploaded_file.read().decode("utf-8")
         
-        # HANDWRITTEN/EMPTY CHECK
         if len(text.strip()) < 10:
-            st.error("⚠️ No text detected! This seems to be a scanned image or handwritten note.")
-            st.warning("Current tech (PyPDF) cannot read pixels. Please convert your image to text using an OCR tool first, or upload a digital PDF.")
+            st.error("⚠️ No text detected! This looks like a scanned image/handwritten note.")
         else:
             st.toast("Document Indexed!", icon="✅")
             
@@ -286,7 +266,7 @@ elif selected == "Planner Pro":
             st.markdown(st.session_state['gen_plan'])
             c_a, c_b, c_c = st.columns(3)
             with c_a: 
-                if st.button("💾 Save to Library"):
+                if st.button("💾 Save"):
                     conn.cursor().execute("INSERT INTO history (tool, title, content) VALUES (?,?,?)", ("Planner", topic, st.session_state['gen_plan']))
                     conn.commit()
                     st.toast("Saved!", icon="✅")
@@ -369,4 +349,4 @@ elif selected == "My Library":
                 st.rerun()
     else:
         st.info("No files found.")
-                
+    
