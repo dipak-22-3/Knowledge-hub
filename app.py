@@ -61,83 +61,102 @@ anim_welcome = load_lottieurl("https://assets5.lottiefiles.com/packages/lf20_1Lh
 anim_chat = load_lottieurl("https://lottie.host/embed/9307c844-3253-4809-9139-44520775d718/animation.json")
 anim_plan = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
-# --- 4. UNIVERSAL HIGH-CONTRAST CSS ---
+# --- 4. CUSTOM CSS (BLUE THEME + WHITE BOARD + BIG BLACK FONT) ---
 st.markdown("""
     <style>
-    /* FORCE LIGHT THEME & HIGH CONTRAST */
+    /* Import Font */
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
     
-    /* 1. Main Background - Always Light Grey */
-    .stApp {
-        background-color: #F0F2F6 !important;
-        color: #000000 !important;
+    html, body, [class*="css"] {
+        font-family: 'Roboto', sans-serif;
     }
 
-    /* 2. Sidebar - Always White */
+    /* 1. SIDEBAR - Deep Royal Blue */
     [data-testid="stSidebar"] {
-        background-color: #FFFFFF !important;
-        border-right: 1px solid #E0E0E0;
+        background-color: #0A2647 !important; /* Deep Blue */
+        border-right: 2px solid #000000;
+    }
+    
+    /* Sidebar Text - White for Visibility */
+    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {
+        color: #FFFFFF !important;
     }
 
-    /* 3. Text Color - Always Dark Grey/Black */
-    h1, h2, h3, h4, h5, h6, p, label, .stMarkdown {
-        color: #1F2937 !important;
-    }
-
-    /* 4. Cards - High Contrast White */
-    .metric-card {
-        background-color: #FFFFFF !important;
-        border: 1px solid #D1D5DB;
-        border-radius: 10px;
-        padding: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        text-align: center;
+    /* 2. MAIN APP - White Board Look */
+    .stApp {
+        background-color: #FFFFFF !important; /* Pure White */
         color: #000000 !important;
+    }
+
+    /* 3. GENERATED TEXT - Black, Bold, Size 22px (AS REQUESTED) */
+    .stMarkdown p, .stMarkdown li, .bot-msg {
+        font-size: 22px !important;
+        font-weight: 700 !important; /* Bold */
+        color: #000000 !important; /* Pure Black */
+        line-height: 1.6 !important;
+    }
+
+    /* Headers (Titles) - Blue */
+    h1, h2, h3 {
+        color: #144272 !important; /* Medium Blue */
+        font-weight: 900 !important;
+    }
+
+    /* 4. CARDS */
+    .metric-card {
+        background: #F1F6F9; /* Very Light Blue Grey */
+        border: 2px solid #144272;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 5px 5px 0px rgba(20, 66, 114, 0.2);
     }
     .metric-value {
-        font-size: 2rem;
-        font-weight: 800;
-        color: #111827 !important;
-    }
-    .metric-label {
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: #4B5563 !important;
-    }
-
-    /* 5. Input Fields - Force White Background, Black Text */
-    .stTextInput>div>div>input, .stTextArea>div>div>textarea, .stSelectbox>div>div>div {
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
-        border: 1px solid #9CA3AF !important;
-    }
-    
-    /* 6. Buttons */
-    .stButton>button {
-        background-color: #2563EB !important;
-        color: white !important;
-        border: none;
-        border-radius: 6px;
+        font-size: 3rem !important;
+        color: #144272 !important;
         font-weight: bold;
     }
-    .stButton>button:hover {
-        background-color: #1D4ED8 !important;
+
+    /* 5. INPUT FIELDS - High Visibility */
+    .stTextInput input, .stTextArea textarea {
+        background-color: #F8F9FA !important;
+        color: #000000 !important;
+        border: 2px solid #144272 !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
     }
 
-    /* 7. Chat Bubbles */
-    .user-msg {
-        background-color: #2563EB;
+    /* 6. BUTTONS */
+    .stButton>button {
+        background-color: #2C74B3 !important; /* Blue Button */
         color: white !important;
-        padding: 10px 15px;
+        font-size: 20px !important;
         border-radius: 10px;
-        margin-bottom: 10px;
+        height: 50px;
+        border: none;
+    }
+    .stButton>button:hover {
+        background-color: #205295 !important; /* Darker Blue on Hover */
+    }
+
+    /* 7. CHAT BUBBLES */
+    .user-msg {
+        background-color: #2C74B3;
+        color: white !important;
+        padding: 15px;
+        border-radius: 15px;
+        font-size: 20px !important;
+        margin-bottom: 15px;
     }
     .bot-msg {
-        background-color: #FFFFFF;
+        background-color: #F1F6F9;
         color: #000000 !important;
-        border: 1px solid #E5E7EB;
-        padding: 10px 15px;
-        border-radius: 10px;
-        margin-bottom: 10px;
+        padding: 15px;
+        border: 2px solid #144272;
+        border-radius: 15px;
+        font-size: 22px !important; /* Size 22 for AI response */
+        font-weight: 700 !important;
+        margin-bottom: 15px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -154,17 +173,16 @@ def create_pdf(text):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    # Using 'ignore' to prevent crashes on unsupported characters
-    clean_text = text.encode('latin-1', 'ignore').decode('latin-1')
+    clean_text = text.encode('latin-1', 'replace').decode('latin-1')
     pdf.multi_cell(0, 10, clean_text)
     return pdf.output(dest='S').encode('latin-1')
 
-# --- 6. SIDEBAR ---
+# --- 6. SIDEBAR NAVIGATION ---
 with st.sidebar:
-    safe_lottie(anim_welcome, 120, "logo_anim")
-    st.markdown("### **KnowledgeOS**")
-    st.caption("v8.0 Universal")
+    safe_lottie(anim_welcome, 150, "logo_anim")
+    st.markdown("<h1 style='text-align: center; color: white;'>KnowledgeOS</h1>", unsafe_allow_html=True)
     
+    # Option Menu with Custom Styles for Dark Sidebar
     selected = option_menu(
         menu_title=None,
         options=["Dashboard", "Smart Chat", "Planner Pro", "Media Studio", "My Library"],
@@ -172,9 +190,9 @@ with st.sidebar:
         default_index=0,
         styles={
             "container": {"background-color": "transparent", "padding": "0"},
-            "icon": {"color": "#2563EB", "font-size": "16px"}, # FIXED: Added Quotes!
-            "nav-link": {"font-size": "14px", "color": "#374151", "margin": "5px"},
-            "nav-link-selected": {"background-color": "#EFF6FF", "color": "#2563EB", "font-weight": "600"},
+            "icon": {"color": "#ffffff", "font-size": "20px"}, 
+            "nav-link": {"font-size": "18px", "color": "#ffffff", "margin": "10px", "text-align": "left"},
+            "nav-link-selected": {"background-color": "#2C74B3", "color": "white", "font-weight": "bold"},
         }
     )
     st.markdown("---")
@@ -184,7 +202,7 @@ with st.sidebar:
 # === DASHBOARD ===
 if selected == "Dashboard":
     st.title("🚀 Command Center")
-    st.markdown("System Status Overview")
+    
     
     c = conn.cursor()
     c.execute("SELECT tool, COUNT(*) FROM history GROUP BY tool")
@@ -200,8 +218,8 @@ if selected == "Dashboard":
 # === SMART CHAT ===
 elif selected == "Smart Chat":
     c1, c2 = st.columns([3, 1])
-    with c1: st.title("🧠 Document Chat")
-    with c2: safe_lottie(anim_chat, 100, "chat_anim")
+    with c1: st.title("🧠 Smart Chat")
+    with c2: safe_lottie(anim_chat, 120, "chat_anim")
     
     uploaded_file = st.file_uploader("Upload PDF / TXT", type=["pdf", "txt"])
     if "chat_history" not in st.session_state: st.session_state.chat_history = []
@@ -216,9 +234,9 @@ elif selected == "Smart Chat":
             text = uploaded_file.read().decode("utf-8")
         
         if len(text.strip()) < 10:
-            st.error("⚠️ No text detected! This looks like a scanned image/handwritten note.")
+            st.error("⚠️ No text detected! This looks like an image or handwritten note.")
         else:
-            st.toast("Document Indexed!", icon="✅")
+            st.success("Document Ready!")
             
             for msg in st.session_state.chat_history:
                 role_class = "user-msg" if msg["role"] == "user" else "bot-msg"
@@ -244,7 +262,7 @@ elif selected == "Smart Chat":
 elif selected == "Planner Pro":
     c1, c2 = st.columns([3, 1])
     with c1: st.title("📝 Planner Pro")
-    with c2: safe_lottie(anim_plan, 100, "plan_anim")
+    with c2: safe_lottie(anim_plan, 120, "plan_anim")
     
     tab1, tab2, tab3 = st.tabs(["📘 Generator", "🗺️ Mind Map", "✉️ Emailer"])
     
@@ -256,20 +274,22 @@ elif selected == "Planner Pro":
         if st.button("Generate Plan ✨", type="primary"):
             with st.spinner("Drafting..."):
                 plan = client.chat.completions.create(
-                    messages=[{"role": "user", "content": f"Create lesson plan for '{topic}' ({level}). Format with clear Markdown."}], 
+                    messages=[{"role": "user", "content": f"Create lesson plan for '{topic}' ({level}). Format nicely."}], 
                     model=MODEL_NAME
                 ).choices[0].message.content
                 st.session_state['gen_plan'] = plan
         
         if 'gen_plan' in st.session_state:
             st.markdown("---")
-            st.markdown(st.session_state['gen_plan'])
+            # Applying specific class for size 22
+            st.markdown(f'<div class="bot-msg">{st.session_state["gen_plan"]}</div>', unsafe_allow_html=True)
+            
             c_a, c_b, c_c = st.columns(3)
             with c_a: 
                 if st.button("💾 Save"):
                     conn.cursor().execute("INSERT INTO history (tool, title, content) VALUES (?,?,?)", ("Planner", topic, st.session_state['gen_plan']))
                     conn.commit()
-                    st.toast("Saved!", icon="✅")
+                    st.success("Saved!")
             with c_b:
                 pdf_bytes = create_pdf(st.session_state['gen_plan'])
                 st.download_button("📥 Download PDF", data=pdf_bytes, file_name="plan.pdf", mime='application/pdf')
@@ -278,18 +298,18 @@ elif selected == "Planner Pro":
                     st.audio(text_to_speech(st.session_state['gen_plan'][:500]))
 
     with tab2:
-        st.subheader("Visual Concept Mapper (Graphviz)")
+        st.subheader("Visual Concept Mapper")
+        
         concept = st.text_input("Concept to Visualize")
         
         if st.button("Visualize 🧠"):
             with st.spinner("Drawing..."):
-                prompt = f"Create a Graphviz DOT code for a mindmap about '{concept}'. Return ONLY the code inside ```dot``` blocks."
+                prompt = f"Create a Graphviz DOT code for a mindmap about '{concept}'. Return ONLY code in ```dot```."
                 res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODEL_NAME).choices[0].message.content
                 clean_code = res.replace("```dot", "").replace("```graphviz", "").replace("```", "").strip()
                 try:
                     st.graphviz_chart(clean_code)
-                except Exception as e:
-                    st.error(f"Error: {e}")
+                except: st.error("Error creating chart.")
 
     with tab3:
         st.subheader("Parent Communication")
@@ -321,8 +341,8 @@ elif selected == "Media Studio":
                     messages=[{"role": "user", "content": f"Summarize:\n{text[:15000]}"}], 
                     model=MODEL_NAME
                 ).choices[0].message.content
-                st.markdown(summary)
-            except: st.error("No captions found or invalid video.")
+                st.markdown(f'<div class="bot-msg">{summary}</div>', unsafe_allow_html=True)
+            except: st.error("No captions found.")
 
 # === MY LIBRARY ===
 elif selected == "My Library":
@@ -341,12 +361,12 @@ elif selected == "My Library":
         with c2: 
             if st.button("📂 Open"):
                 data = conn.cursor().execute("SELECT content FROM history WHERE id=?", (oid,)).fetchone()
-                if data: st.markdown(f"---\n{data[0]}")
+                if data: st.markdown(f'<div class="bot-msg">{data[0]}</div>', unsafe_allow_html=True)
         with c3:
             if st.button("🗑️ Delete", type="primary"):
                 conn.cursor().execute("DELETE FROM history WHERE id=?", (oid,))
                 conn.commit()
-                st.rerun()
+                st.experimental_rerun()
     else:
         st.info("No files found.")
     
